@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import 'detail_meal.dart';
+
 class MealList extends StatefulWidget {
   final String meals;
 
@@ -49,12 +51,12 @@ class _MealList extends State<MealList> {
           final category = _meals[index];
           return InkWell(
             onTap: () {
-              // Navigator.push(
-              //     context,
-              //     MaterialPageRoute(
-              //         builder: (context) => MealPage(
-              //               team: team,
-              //             )));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => FoodDetailPage(
+                            foodId: category['idMeal'],
+                          )));
             },
             child: Card(
               child: ListTile(

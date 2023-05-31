@@ -1,39 +1,24 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
-class MealDetail extends StatefulWidget {
-  final String meals;
+class FoodDetailPage extends StatelessWidget {
+  final String foodId;
 
-  const MealDetail({Key? key, required this.meals}) : super(key: key);
+  const FoodDetailPage({required this.foodId});
 
-  @override
-  _MealDetailState createState() => _MealDetailState();
-}
-
-class _MealDetailState extends State<MealDetail> {
-  List _meals = [];
-
-  @override
-  void initState() {
-    super.initState();
-    fetchData();
-  }
-
-  Future<void> fetchData() async {
-    final response = await http.get(
-      Uri.parse(
-        "https://www.themealdb.com/api/json/v1/1/lookup.php?i=${widget.meals.toLowerCase()}",
-      ),
-    );
+  Future<Map<String, dynamic>> fetchFoodById() async {
+    final response = await http.get(Uri.parse(
+        'http://www.themealdb.com/api/json/v1/1/lookup.php?i=$foodId'));
 
     if (response.statusCode == 200) {
-      setState(() {
-        _meals = json.decode(response.body)['meals'];
-      });
+      final data = jsonDecode(response.body);
+      final food = data['meals'][0];
+      return food;
     } else {
-      throw Exception('Gagal mengambil data dari API');
+      throw Exception('Failed to fetch food');
     }
   }
 
@@ -41,47 +26,117 @@ class _MealDetailState extends State<MealDetail> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Meal Detail'),
+        title: Text('Detail Makanan'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(height: 20),
-            Text(
-              'Category: ' + _meals['strMealThumb'].toString(),
-              style: TextStyle(fontSize: 20),
-            ),
-            SizedBox(height: 10),
-            Text(
-              'Category: ' + _meals['strArea'].toString(),
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(height: 10),
-            Text(
-              'Category: ' + _meals['strInstructions'].toString(),
-              style: TextStyle(fontSize: 16),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(80, 10, 80, 0),
-              child: ElevatedButton(
-                onPressed: () {
-                  _launchInBrowser(_meals['strYoutube'].toString());
-                },
-                child: Text('See Details !'),
+      body: FutureBuilder(
+        future: fetchFoodById(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            final food = snapshot.data as Map<String, dynamic>;
+
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Image.network(
+                    food['strMealThumb'],
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                  SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      food['strMeal'],
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  SizedBox(height: 14),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      'Category',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      food['strCategory'],
+                      style: TextStyle(fontSize: 15),
+                    ),
+                  ),
+                  SizedBox(height: 14),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      'Food Area',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      food['strArea'],
+                      style: TextStyle(fontSize: 15),
+                    ),
+                  ),
+                  SizedBox(height: 14),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      'Instructions',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      food['strInstructions'],
+                    ),
+                  ),
+                  SizedBox(height: 14),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      'YouTube Link',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: InkWell(
+                        child: Text(
+                          food['strYoutube'],
+                          style: TextStyle(fontSize: 15, color: Colors.blue),
+                        ),
+                        onTap: () async {
+                          final Uri url = Uri.parse(food['strYoutube']);
+                          if (!await launchUrl(url)) {
+                            throw Exception('Could not launch');
+                          }
+                        }),
+                  ),
+                  SizedBox(height: 16),
+                ],
               ),
-            )
-          ],
-        ),
+            );
+          }
+        },
       ),
     );
-  }
-
-  Future<void> _launchInBrowser(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url);
-    } else {
-      throw Exception('Could not launch $url');
-    }
   }
 }
